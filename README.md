@@ -8,6 +8,11 @@ The UI is available in English and Norwegian.
 
 > The project started out as *lydvev*, which is Norwegian for "sound weave".
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/graph-dark.png">
+  <img alt="The graph view: sources on the left, sinks on the right, grouped by device" src="docs/graph-light.png">
+</picture>
+
 ## Features
 
 - **Graph that untangles itself.** The graph is laid out with [ELK](https://www.eclipse.org/elk/)'s
@@ -31,6 +36,20 @@ The UI is available in English and Norwegian.
   with copy-paste snippets and the file path. Symptom search (*crackling*, *stutter*, *latency*,
   *bad headset mic*) leads you to the options that matter. Press **Ctrl+K** to search everything.
 - **Inspector.** Click any node to see all its properties and what it is linked to.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/devices-dark.png">
+  <img alt="Devices: defaults, apps and sound cards with profiles and volumes" src="docs/devices-light.png">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/settings-dark.png">
+  <img alt="Settings: every WirePlumber setting with descriptions, plus symptom search" src="docs/settings-light.png">
+</picture>
+
+The screenshots come from `scripts/screenshot/shoot.sh`. It records your PipeWire graph, anonymizes
+it (user, host, machine id, MAC addresses, Bluetooth names), and renders the real UI in headless
+Chrome.
 
 ## How it works
 

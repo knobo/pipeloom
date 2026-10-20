@@ -9,7 +9,9 @@
   import CommandPalette, { type PaletteTarget } from './lib/panels/CommandPalette.svelte';
 
   type Tab = 'graph' | 'devices' | 'settings';
-  let tab = $state<Tab>('devices');
+  // #graph / #devices / #settings picks the start tab (used by scripts/screenshot).
+  const start = location.hash.slice(1);
+  let tab = $state<Tab>(start === 'graph' || start === 'settings' ? start : 'devices');
   let selected = $state<number | null>(null);
   let focusKey = $state<string | null>(null);
   let paletteOpen = $state(false);
