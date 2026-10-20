@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a2130"/>
+      <stop offset="1" stop-color="#0c0f14"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+  </defs>
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="url(#bg)"/>
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="none" stroke="#253043" stroke-width="8"/>
+  <!-- three wires woven left to right: audio, midi, video -->
+  <g fill="none" stroke-linecap="round" stroke-width="56">
+    <g filter="url(#glow)" opacity="0.55">
+      <path d="M232 352 C512 352 512 672 792 672" stroke="#2dd4bf"/>
+      <path d="M232 672 C512 672 512 352 792 352" stroke="#a78bfa"/>
+      <path d="M232 512 C400 512 624 512 792 512" stroke="#fbbf24"/>
+    </g>
+    <path d="M232 352 C512 352 512 672 792 672" stroke="#2dd4bf"/>
+    <path d="M232 512 C400 512 624 512 792 512" stroke="#fbbf24"/>
+    <path d="M232 672 C512 672 512 352 792 352" stroke="#a78bfa"/>
+  </g>
+  <!-- ports -->
+  <g stroke-width="22" fill="#0c0f14">
+    <circle cx="232" cy="352" r="44" stroke="#2dd4bf"/>
+    <circle cx="232" cy="512" r="44" stroke="#fbbf24"/>
+    <circle cx="232" cy="672" r="44" stroke="#a78bfa"/>
+    <circle cx="792" cy="352" r="44" stroke="#a78bfa"/>
+    <circle cx="792" cy="512" r="44" stroke="#fbbf24"/>
+    <circle cx="792" cy="672" r="44" stroke="#2dd4bf"/>
+  </g>
+</svg>
