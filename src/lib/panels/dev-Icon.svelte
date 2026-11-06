@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { IconKind } from './dev-helpers';
-  let { kind, size = 22 }: { kind: IconKind | 'muted' | 'volume' | 'star' | 'star-filled'; size?: number } = $props();
+  let { kind, size = 22 }: { kind: IconKind | 'muted' | 'volume' | 'star' | 'star-filled' | 'check' | 'chevron' | 'pin' | 'follow'; size?: number } = $props();
 </script>
 
 <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
@@ -17,6 +17,14 @@
     <rect x="2.5" y="6" width="13" height="12" rx="2" /><path d="M15.5 10.5 21.5 7v10l-6-3.5" />
   {:else if kind === 'hdmi'}
     <rect x="2.5" y="4" width="19" height="13" rx="1.5" /><path d="M8 21h8M12 17v4" />
+  {:else if kind === 'check'}
+    <path d="m5 12.5 4.5 4.5L19 7.5" />
+  {:else if kind === 'chevron'}
+    <path d="m7 10 5 5 5-5" />
+  {:else if kind === 'pin'}
+    <path d="M9 3.5h6M10 3.5v5.5L6.5 13h11L14 9V3.5M12 13v7.5" />
+  {:else if kind === 'follow'}
+    <path d="M4 12h11M11 7l5 5-5 5M20 5v14" />
   {:else if kind === 'volume' || kind === 'muted'}
     <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" />
     {#if kind === 'volume'}<path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" />{:else}<path d="m16 9.5 5 5m0-5-5 5" />{/if}

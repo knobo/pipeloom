@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { buildModel, type PwObject } from '../model';
 import dump from '../fixture.dump.json';
 import { i18n, loc } from '../i18n.svelte';
-import { GROUP_TITLES, channelNames, codecOf, groupDevices, iconOf, profileLabel, routeChoices } from './dev-helpers';
+import { GROUP_TITLES, appPinned, channelNames, nodeKind, pinnedByApp, codecOf, groupDevices, iconOf, linkedTarget, pinnedTarget, profileLabel, routeChoices, targetChoices } from './dev-helpers';
 
 const p = (name: string, description = '') => ({ name, description });
 
@@ -52,5 +52,45 @@ describe('device grouping on the fixture', () => {
   });
   it('parses channel positions', () => {
     expect(channelNames(m.nodes.get(61)!)).toEqual(['FL', 'FR']);
+  });
+});
+
+describe('stream targets', () => {
+  const node = (id: number, name: string, cls: string, extra: Record<string, any> = {}) =>
+    ({ id, type: 'PipeWire:Interface:Node', info: { props: { 'node.name': name, 'media.class': cls, ...extra } } });
+  const objs = (md: any[] = []): PwObject[] => [
+    node(1, 'chrome', 'Stream/Output/Audio'),
+    node(2, 'bluez_output.x', 'Audio/Sink', { 'object.serial': 200 }),
+    node(3, 'bluez_output.x.1', 'Audio/Sink/Internal'),
+    node(4, 'alsa_output.analog', 'Audio/Sink', { 'object.serial': 400 }),
+    node(5, 'mic', 'Audio/Source'),
+    { id: 9, type: 'PipeWire:Interface:Link', info: { 'output-node-id': 1, 'output-port-id': 11, 'input-node-id': 4, 'input-port-id': 41 } },
+    { id: 41, type: 'PipeWire:Interface:Metadata', props: { 'metadata.name': 'default' }, metadata: md },
+  ];
+  it('offers real sinks only, and finds the current link', () => {
+    const m = buildModel(objs());
+    const s = m.nodes.get(1)!;
+    expect(targetChoices(s, m).map((n) => n.id)).toEqual([4, 2]);
+    expect(nodeKind(m.nodes.get(4)!, m)).toEqual({ icon: 'speaker', kind: 'Virtuell' }); // no device object
+    expect(linkedTarget(s, m)?.id).toBe(4);
+    expect(pinnedTarget(s, m)).toBeUndefined();
+  });
+  it('resolves target.object by name or serial', () => {
+    const md = (value: any) => [{ subject: 1, key: 'target.object', type: '', value }];
+    expect(pinnedTarget(buildModel(objs(md('alsa_output.analog'))).nodes.get(1)!, buildModel(objs(md('alsa_output.analog'))))?.id).toBe(4);
+    const m = buildModel(objs(md('200')));
+    expect(pinnedTarget(m.nodes.get(1)!, m)?.id).toBe(2);
+    const none = buildModel(objs(md(-1)));
+    expect(pinnedTarget(none.nodes.get(1)!, none)).toBeUndefined();
+  });
+  it('sees a target the app chose itself, and lets metadata "-1" override it', () => {
+    const own = (md: any[] = []) => objs(md).map((o) => (o.id === 1 ? node(1, 'chrome', 'Stream/Output/Audio', { 'target.object': 400 }) : o));
+    const m = buildModel(own());
+    expect(appPinned(m.nodes.get(1)!)).toBe(true);
+    expect(pinnedTarget(m.nodes.get(1)!, m)?.id).toBe(4);
+    expect(pinnedByApp(m.nodes.get(1)!, m)).toBe(true);
+    const o = buildModel(own([{ subject: 1, key: 'target.object', type: '', value: '-1' }]));
+    expect(pinnedTarget(o.nodes.get(1)!, o)).toBeUndefined();
+    expect(pinnedByApp(o.nodes.get(1)!, o)).toBe(false);
   });
 });

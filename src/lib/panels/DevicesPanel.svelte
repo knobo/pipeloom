@@ -6,6 +6,7 @@
   import Icon from './dev-Icon.svelte';
   import VolumeRow from './dev-VolumeRow.svelte';
   import ProfilePicker from './dev-ProfilePicker.svelte';
+  import RoutePicker from './dev-RoutePicker.svelte';
 
   let { model, focusKey, onselect }: { model: Model; focusKey: string | null; onselect: (nodeId: number) => void } = $props();
 
@@ -13,10 +14,23 @@
   const sink = $derived(byName(model.defaults['default.audio.sink']));
   const source = $derived(byName(model.defaults['default.audio.source']));
   const apps = $derived(
-    [...model.nodes.values()].filter((n) => (n.role === 'app-out' || n.role === 'app-in') && n.volume !== undefined)
+    // Internal (WirePlumber's BT loopbacks) and monitor streams (pavucontrol's peak meters) are plumbing, not apps.
+    [...model.nodes.values()].filter((n) => (n.role === 'app-out' || n.role === 'app-in') && n.volume !== undefined
+      && !/Internal/.test(n.mediaClass) && !n.props['stream.monitor'])
       .sort((a, b) => a.role.localeCompare(b.role) || (a.app ?? a.label).localeCompare(b.app ?? b.label)),
   );
+  let appKind = $state<'all' | 'app-out' | 'app-in'>('all');
+  let activeOnly = $state(false);
+  const count = (k: typeof appKind) => apps.filter((n) => k === 'all' || n.role === k).length;
+  const shownApps = $derived(apps.filter((n) => (appKind === 'all' || n.role === appKind) && (!activeOnly || n.state === 'running')));
   const groups = $derived(groupDevices(model));
+  /** What is playing (a tab title, a song) beats the generic "playing"; the state only when it is not running. */
+  const appSub = (n: Node) => {
+    const what = n.props['media.name'], app = n.app && n.app !== n.label ? n.app : undefined;
+    const main = what && what !== n.label && !/^(playback|record|capture)$/i.test(what) ? what : app;
+    const idle = n.state === 'running' ? '' : tr('pause', 'paused');
+    return [main, idle].filter(Boolean).join(' · ') || undefined;
+  };
   const nodesOf = (ids: number[]) => ids.map((id) => model.nodes.get(id)).filter((n): n is Node => !!n);
 
   let highlight = $state<number | null>(null);
@@ -52,10 +66,27 @@
 
   {#if apps.length}
     <section>
-      <h2>{tr('Apper', 'Apps')}</h2>
+      <div class="apps-head">
+        <h2>{tr('Apper', 'Apps')}</h2>
+        <div class="seg" role="radiogroup" aria-label={tr('Vis apper', 'Show apps')}>
+          {#each [['all', tr('Alle', 'All')], ['app-out', tr('Avspilling', 'Playback')], ['app-in', tr('Opptak', 'Recording')]] as [k, label] (k)}
+            {@const c = count(k as typeof appKind)}
+            <button role="radio" aria-checked={appKind === k} disabled={c === 0 && k !== 'all'} onclick={() => (appKind = k as typeof appKind)}>
+              {label}<span class="n">{c}</span>
+            </button>
+          {/each}
+        </div>
+        <button class="chip" aria-pressed={activeOnly} onclick={() => (activeOnly = !activeOnly)}>
+          <span class="dot" aria-hidden="true"></span>{tr('Bare aktive', 'Active only')}
+        </button>
+      </div>
       <div class="card list">
-        {#each apps as n (n.id)}
-          <VolumeRow node={n} {onselect} sub={`${n.role === 'app-out' ? tr('spiller', 'playing') : tr('tar opp', 'recording')}${n.app && n.app !== n.label ? ` · ${n.app}` : ''}${n.state === 'running' ? '' : ` · ${n.state}`}`} />
+        {#each shownApps as n (n.id)}
+          <VolumeRow node={n} {onselect} sub={appSub(n)}>
+            {#snippet aside()}<RoutePicker node={n} {model} />{/snippet}
+          </VolumeRow>
+        {:else}
+          <p class="empty pad">{activeOnly ? tr('Ingen apper spiller eller tar opp akkurat nå.', 'No app is playing or recording right now.') : tr('Ingen apper i denne kategorien.', 'No apps in this category.')}</p>
         {/each}
       </div>
     </section>
@@ -118,6 +149,25 @@
   .badges { display: flex; gap: 6px; margin-top: 3px; }
   .badge { font: 11px var(--mono); color: var(--text-dim); background: var(--bg-elev-2); border: 1px solid var(--border); border-radius: 5px; padding: 0 6px; }
   .nodes { border-top: 1px solid var(--border); padding-top: 4px; }
+  .apps-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+  .apps-head h2 { margin: 0; margin-right: auto; }
+  .seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 10px; background: var(--bg-elev); border: 1px solid var(--border); }
+  .seg button {
+    display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; border-radius: 7px;
+    padding: 4px 10px; font-size: 13px; color: var(--text-dim); cursor: pointer; transition: background-color 0.15s, color 0.15s;
+  }
+  .seg button:hover:not(:disabled) { color: var(--text); }
+  .seg button[aria-checked='true'] { background: var(--bg-elev-2); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0 / 0.25); }
+  .seg button:disabled { opacity: 0.4; cursor: default; }
+  .n { font: 11px var(--mono); font-variant-numeric: tabular-nums; color: var(--text-dim); }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border-radius: 999px; font-size: 13px;
+    border: 1px solid var(--border); background: var(--bg-elev); color: var(--text-dim); cursor: pointer; transition: all 0.15s;
+  }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); opacity: 0.5; transition: inherit; }
+  .chip[aria-pressed='true'] { color: var(--text); border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+  .chip[aria-pressed='true'] .dot { background: var(--accent); opacity: 1; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+  .empty.pad { padding: 14px 0; }
   .empty { margin: 0; color: var(--text-dim); font-size: 13px; }
   @media (prefers-reduced-motion: reduce) { .card { transition: none; } }
 </style>
