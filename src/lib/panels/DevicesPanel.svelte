@@ -3,6 +3,7 @@
   import type { Model, Node } from '../model';
   import { GROUP_TITLES, groupDevices, iconOf } from './dev-helpers';
   import { loc, tr } from '../i18n.svelte';
+  import { FILTER_KEY, prefs } from '../prefs.svelte';
   import Icon from './dev-Icon.svelte';
   import VolumeRow from './dev-VolumeRow.svelte';
   import ProfilePicker from './dev-ProfilePicker.svelte';
@@ -19,8 +20,14 @@
       && !/Internal/.test(n.mediaClass) && !n.props['stream.monitor'])
       .sort((a, b) => a.role.localeCompare(b.role) || (a.app ?? a.label).localeCompare(b.app ?? b.label)),
   );
-  let appKind = $state<'all' | 'app-out' | 'app-in'>('all');
-  let activeOnly = $state(false);
+  let saved: { kind?: string; activeOnly?: boolean } = {};
+  if (prefs.rememberFilters) try { saved = JSON.parse(localStorage.getItem(FILTER_KEY) ?? '{}'); } catch { /* storage unavailable */ }
+  let appKind = $state<'all' | 'app-out' | 'app-in'>(saved.kind === 'app-out' || saved.kind === 'app-in' ? saved.kind : 'all');
+  let activeOnly = $state(saved.activeOnly === true);
+  $effect(() => {
+    const v = JSON.stringify({ kind: appKind, activeOnly });
+    if (prefs.rememberFilters) try { localStorage.setItem(FILTER_KEY, v); } catch { /* ignore */ }
+  });
   const count = (k: typeof appKind) => apps.filter((n) => k === 'all' || n.role === k).length;
   const shownApps = $derived(apps.filter((n) => (appKind === 'all' || n.role === appKind) && (!activeOnly || n.state === 'running')));
   const groups = $derived(groupDevices(model));

@@ -7,6 +7,7 @@
     RESTART_CMD, HIDDEN_META, type CoreSetting,
   } from './catalog';
   import { tr, loc } from '../i18n.svelte';
+  import { prefs, setRememberFilters } from '../prefs.svelte';
 
   let { model, focusKey }: { model: Model; focusKey: string | null } = $props();
 
@@ -43,7 +44,9 @@
   const rawMeta = $derived([...model.metadata.values()].filter((m) => !HIDDEN_META.has(m.name))
     .map((m) => ({ name: m.name, entries: m.entries.filter((e) => visible(`${m.name}:${e.key}`)) }))
     .filter((m) => m.entries.length));
-  const nothing = $derived(!wpGroups.length && !coreList.length && !gemList.length && !rawMeta.length);
+  // pipeloom's own settings: shown on an empty search or one that names them; "changed" means off (default is on).
+  const showOwn = $derived((!query.trim() || /husk|remember|filter|pipeloom|app/i.test(query)) && (!onlyChanged || !prefs.rememberFilters));
+  const nothing = $derived(!showOwn && !wpGroups.length && !coreList.length && !gemList.length && !rawMeta.length);
 
   async function run(id: string, fn: () => Promise<unknown>, optimistic?: unknown) {
     delete errors[id];
@@ -149,6 +152,24 @@
   </div>
 
   {#if nothing}<p class="empty">{tr('Ingen treff. Prøv et annet ord — både norsk og engelsk virker.', 'No matches. Try another word — both English and Norwegian work.')}</p>{/if}
+
+  {#if showOwn}
+    <h2>Pipeloom <span class="sub">— {tr('lagres på denne maskinen', 'stored on this machine')}</span></h2>
+    <section class="item" class:changed={!prefs.rememberFilters} data-id="pipeloom:remember-filters">
+      <div class="head">
+        <div class="titles">
+          <div class="title">{tr('Husk filtervalg', 'Remember filters')}</div>
+        </div>
+        <div class="control">
+          <button class="switch" role="switch" aria-checked={prefs.rememberFilters} aria-label={tr('Husk filtervalg', 'Remember filters')}
+            onclick={() => setRememberFilters(!prefs.rememberFilters)}><span></span></button>
+        </div>
+      </div>
+      <p class="desc">{tr('Apper-filteret på Devices (Alle / Avspilling / Opptak og «Bare aktive») er som sist når du åpner pipeloom igjen. Skrur du det av, glemmes det lagrede valget.',
+        'The Apps filter on Devices (All / Playback / Recording and “Active only”) stays as you left it when you reopen pipeloom. Turning this off forgets the saved choice.')}</p>
+      <div class="meta"><span>{tr('Standard', 'Default')}: {tr('på', 'on')}</span></div>
+    </section>
+  {/if}
 
   {#if wpGroups.length}
     <h2>WirePlumber <span class="sub">— {tr('endres med', 'changed with')} <code>wpctl settings</code></span></h2>
