@@ -85,3 +85,44 @@ export const pct = (v: number) => `${Math.round(v * 100)} %`;
 
 /** Fire-and-forget a backend command; the next snapshot shows the result. */
 export const run = (p: Promise<unknown>) => void p.catch((e) => console.error('pipeloom:', e));
+
+/** Devices an app stream can be moved to: real sinks for playback, sources for recording. */
+export const targetChoices = (n: Node, m: Model): Node[] =>
+  [...m.nodes.values()]
+    .filter((x) => (n.role === 'app-out' ? /^Audio\/Sink/ : /^Audio\/Source/).test(x.mediaClass) && !/Internal/.test(x.mediaClass))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+/** True when the app itself asked for a device (e.g. a website's chosen speaker); only metadata "-1" overrides that. */
+export const appPinned = (n: Node) => n.props['target.object'] !== undefined || n.props['node.target'] !== undefined;
+
+/** The app's own choice is in effect: it pinned itself and no metadata entry overrides it. */
+export const pinnedByApp = (n: Node, m: Model) =>
+  appPinned(n) && !m.metadata.get('default')?.entries.some((e) => e.subject === n.id && e.key === 'target.object');
+
+/** The node a stream is pinned to: `target.object` in the "default" metadata (name or serial) wins, then the
+ *  stream's own props, like WirePlumber's find-defined-target. Metadata "-1" means "follow the default". */
+export function pinnedTarget(n: Node, m: Model): Node | undefined {
+  const md = m.metadata.get('default')?.entries.find((e) => e.subject === n.id && e.key === 'target.object')?.value;
+  const v = md ?? n.props['target.object'];
+  const nodes = [...m.nodes.values()];
+  if (v === undefined) return n.props['node.target'] !== undefined ? m.nodes.get(+n.props['node.target']) : undefined;
+  if (v === null || v === '' || String(v) === '-1') return undefined;
+  return nodes.find((x) => x.name === v || String(x.props['object.serial']) === String(v));
+}
+
+/** Where the stream is linked right now (first peer node). */
+export function linkedTarget(n: Node, m: Model): Node | undefined {
+  const l = m.links.find((x) => (n.role === 'app-out' ? x.outNode : x.inNode) === n.id);
+  return l && m.nodes.get(n.role === 'app-out' ? l.inNode : l.outNode);
+}
+
+/** Icon and a short kind label for a device node in the output picker. */
+export function nodeKind(n: Node, m: Model): { icon: IconKind; kind: string } {
+  const d = n.deviceId !== undefined ? m.devices.get(n.deviceId) : undefined;
+  if (!d) return { icon: n.role === 'source' ? 'mic' : 'speaker', kind: tr('Virtuell', 'Virtual') };
+  const icon = iconOf(d, m);
+  if (d.api === 'bluez5') return { icon, kind: 'Bluetooth' };
+  if (icon === 'hdmi') return { icon, kind: 'HDMI' };
+  if (d.bus === 'usb') return { icon, kind: 'USB' };
+  return { icon, kind: tr('Innebygd', 'Built-in') };
+}

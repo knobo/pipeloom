@@ -1,5 +1,6 @@
 <script lang="ts">
   // One node: name (opens inspector), volume slider, mute, "set as default".
+  import type { Snippet } from 'svelte';
   import type { Node } from '../model';
   import { setDefault, setMute, setVolume } from '../api';
   import { run } from './dev-helpers';
@@ -7,8 +8,8 @@
   import Slider from './ui-Slider.svelte';
   import Icon from './dev-Icon.svelte';
 
-  let { node, onselect, big = false, sub }: {
-    node: Node; onselect?: (id: number) => void; big?: boolean; sub?: string;
+  let { node, onselect, big = false, sub, aside }: {
+    node: Node; onselect?: (id: number) => void; big?: boolean; sub?: string; aside?: Snippet;
   } = $props();
   const canDefault = $derived(/^Audio\/(Sink|Source)/.test(node.mediaClass));
 </script>
@@ -21,6 +22,7 @@
       <span class="name">{node.label}</span>
     {/if}
     {#if sub}<span class="sub">{sub}</span>{/if}
+    {#if aside}<span class="aside">{@render aside()}</span>{/if}
   </div>
   <div class="ctl">
     {#if node.volume !== undefined}
@@ -50,11 +52,14 @@
 <style>
   .row { display: flex; flex-direction: column; gap: 2px; padding: 6px 0; }
   .head { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+  .aside { margin-left: auto; padding-left: 12px; }
+  .head:has(.aside) { align-items: center; }
   .name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .big .name { font-size: 16px; }
   .link { background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
   .link:hover { color: var(--accent); text-decoration: underline; }
-  .sub { color: var(--text-dim); font-size: 12px; white-space: nowrap; }
+  .sub { color: var(--text-dim); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .name { flex: none; max-width: 60%; }
   .ctl { display: flex; align-items: center; gap: 8px; }
   .icon { background: none; border: 0; padding: 4px; border-radius: 6px; cursor: pointer; color: var(--text-dim); display: grid; place-items: center; flex: none; }
   .icon:hover { background: var(--bg-elev-2); color: var(--text); }
